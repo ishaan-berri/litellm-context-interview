@@ -31,35 +31,37 @@ Some providers handle this natively; others don't:
 | Anthropic | Native (different format) | Translate to `edits` dict ✅ done |
 | **Nexus** | **None** | **Trim messages client-side — your task** |
 
-LiteLLM already has a token trimmer (`trim_messages`) that reduces message history
-to fit a token budget.  You just need to call it in the right place.
+LiteLLM already has a token trimmer (`trim_messages`) that reduces message
+history to fit a token budget.  You just need to call it inside the Nexus
+provider's `transform_request` method.
 
 ---
 
 ## Your Task
 
-In **`litellm_mini/router.py`**, find the `TODO` and replace the `pass` with
-~3 lines that:
+Implement `NexusProvider.transform_request()` in **`litellm_mini/providers/nexus.py`**.
 
-1. Extract the token threshold from `context_management` using `get_compact_threshold()`
-2. Call `trim_messages(messages, threshold)` to get the trimmed message list
-3. Don't forward `context_management` to Nexus (the `pass` already handles this — just don't add it to `kwargs`)
+The method receives the message list and the `context_management` param before
+the request is sent to Nexus.  It should:
 
-Both functions are already imported at the top of `router.py`.
+1. Call `get_compact_threshold(context_management)` to extract the token budget.
+2. If a threshold is found, call `trim_messages(messages, threshold)` to reduce the list.
+3. Return `(trimmed_messages, None)` — returning `None` for `context_management`
+   tells the router not to forward it to Nexus (Nexus doesn't accept it).
+4. If there's no threshold (unknown type or `context_management=None`),
+   return `(messages, None)` unchanged — still drop the param.
+
+Both `get_compact_threshold` and `trim_messages` are already imported at the top of the file.
 
 ---
 
-## The One Place to Edit
+## The One File to Edit
 
-```python
-# litellm_mini/router.py  (around line 47)
-
-        else:
-            # TODO: provider has no context_management support.
-            # Use trim_messages to reduce the message list before dispatch.
-            # Don't forward context_management to the provider.
-            pass       # ← replace this
 ```
+litellm_mini/providers/nexus.py   ← implement transform_request() here
+```
+
+The `TODO` and step-by-step instructions are inside the method stub.
 
 ---
 
@@ -81,12 +83,29 @@ pytest tests/test_nexus_context_management.py -v
 
 ```
 litellm_mini/
-├── router.py            ← YOUR FILE (one TODO, ~3 lines)
+├── providers/
+│   ├── nexus.py         ← YOUR FILE
+│   ├── openai.py        # transform_request: default (pass through)
+│   └── anthropic.py     # transform_request: default (pass through, translate in map_openai_params)
 ├── token_trimmer.py     # trim_messages() and get_compact_threshold() — already implemented
-├── types.py
-├── base_provider.py
-└── providers/
-    ├── openai.py        # lists "context_management" → router forwards it
-    ├── anthropic.py     # lists "context_management" → router translates it
-    └── nexus.py         # does NOT list "context_management" → your code trims
+├── router.py            # calls provider.transform_request() then map_openai_params()
+├── base_provider.py     # BaseProvider with default transform_request()
+└── types.py
 ```
+
+---
+
+## Hints
+
+<details>
+<summary>Hint</summary>
+
+```python
+def transform_request(self, messages, context_management):
+    threshold = get_compact_threshold(context_management)
+    if threshold is not None:
+        messages = trim_messages(messages, threshold)
+    return messages, None
+```
+
+</details>

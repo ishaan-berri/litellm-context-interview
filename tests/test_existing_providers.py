@@ -30,5 +30,5 @@ def test_anthropic_translates_to_edits():
 
 def test_no_context_management_passes_all_messages():
     msgs = [{"role": "user", "content": "hi"}] * 5
-    result = completion(model="nexus/fast-v1", messages=msgs)
+    result = completion(model="gpt-4o", messages=msgs)
     assert len(result["messages"]) == 5
