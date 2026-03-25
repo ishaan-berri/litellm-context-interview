@@ -8,7 +8,7 @@ the internal token trimmer before the request is sent.
 from typing import Any, Dict, List, Optional, Tuple
 
 from litellm_mini.base_provider import BaseProvider
-from litellm_mini.token_trimmer import get_compact_threshold, trim_messages
+from litellm_mini.token_trimmer import trim_messages
 from litellm_mini.types import ContextManagementEntry
 
 
@@ -23,18 +23,13 @@ class NexusProvider(BaseProvider):
         context_management: Optional[List[ContextManagementEntry]],
     ) -> Tuple[List[Dict[str, Any]], Optional[List[ContextManagementEntry]]]:
         """
-        Trim messages to fit within compact_threshold when context_management
-        is set, then drop context_management so it isn't forwarded to Nexus.
+        Nexus has no context_management API — handle it client-side.
 
-        TODO: implement this method.
+        Use trim_messages (already imported) to trim the message list when
+        context_management is present. Return (messages, None) — the None
+        tells the router not to forward context_management to Nexus.
 
-        Steps:
-          1. Call get_compact_threshold(context_management) to get the threshold.
-          2. If a threshold is found, call trim_messages(messages, threshold).
-          3. Return (trimmed_messages, None) — None signals the router to drop
-             context_management from the outgoing request.
-          4. If no threshold (unknown type or None), return (messages, None)
-             unchanged — still drop context_management, Nexus doesn't know it.
+        TODO: implement this.
         """
         raise NotImplementedError
 

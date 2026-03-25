@@ -41,17 +41,10 @@ provider's `transform_request` method.
 
 Implement `NexusProvider.transform_request()` in **`litellm_mini/providers/nexus.py`**.
 
-The method receives the message list and the `context_management` param before
-the request is sent to Nexus.  It should:
-
-1. Call `get_compact_threshold(context_management)` to extract the token budget.
-2. If a threshold is found, call `trim_messages(messages, threshold)` to reduce the list.
-3. Return `(trimmed_messages, None)` — returning `None` for `context_management`
-   tells the router not to forward it to Nexus (Nexus doesn't accept it).
-4. If there's no threshold (unknown type or `context_management=None`),
-   return `(messages, None)` unchanged — still drop the param.
-
-Both `get_compact_threshold` and `trim_messages` are already imported at the top of the file.
+The method receives the full message list and the `context_management` param
+before the request is sent to Nexus.  Use `trim_messages` (already imported)
+to reduce the message list when needed.  Return `(messages, None)` — the `None`
+tells the router not to forward `context_management` to Nexus.
 
 ---
 
@@ -95,17 +88,3 @@ litellm_mini/
 
 ---
 
-## Hints
-
-<details>
-<summary>Hint</summary>
-
-```python
-def transform_request(self, messages, context_management):
-    threshold = get_compact_threshold(context_management)
-    if threshold is not None:
-        messages = trim_messages(messages, threshold)
-    return messages, None
-```
-
-</details>
