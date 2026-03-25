@@ -49,6 +49,9 @@ def completion(
     optional_params: Dict[str, Any] = {}
     translated = provider.map_openai_params(non_default_params, optional_params, model)
 
+    if hasattr(provider, "complete"):
+        return provider.complete(model, messages, translated)
+
     return {
         "model": model,
         "messages": messages,

@@ -5,11 +5,15 @@ Nexus does not have a context_management API parameter.  Instead, LiteLLM
 handles it client-side in transform_request(): the messages are trimmed using
 the internal token trimmer before the request is sent.
 """
+import requests
 from typing import Any, Dict, List, Optional, Tuple
 
 from litellm_mini.base_provider import BaseProvider
 from litellm_mini.token_trimmer import trim_messages
 from litellm_mini.types import ContextManagementEntry
+
+NEXUS_API_URL = "https://fakecustomprovider-production.up.railway.app/v1/chat"
+NEXUS_API_KEY = "nxk-test123"
 
 
 class NexusProvider(BaseProvider):
@@ -42,3 +46,15 @@ class NexusProvider(BaseProvider):
             else:
                 optional_params[param] = value
         return optional_params
+
+    def complete(
+        self, model: str, messages: List[Dict[str, Any]], params: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        resp = requests.post(
+            NEXUS_API_URL,
+            headers={"X-Nexus-Key": NEXUS_API_KEY, "Content-Type": "application/json"},
+            json={"model": "nexus-ultra-v1", "messages": messages, **params},
+            timeout=10,
+        )
+        resp.raise_for_status()
+        return resp.json()
