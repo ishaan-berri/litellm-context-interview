@@ -1,11 +1,14 @@
 """
 Router: maps model names to providers, applies context_management.
 
-For providers that list "context_management" in their supported params
-(OpenAI, Anthropic), the param is forwarded and translated as needed.
+Providers that list "context_management" in their supported params
+(OpenAI, Anthropic) handle it natively — the param is forwarded.
 
-For providers that do NOT list it (Nexus), the router uses LiteLLM's
-internal token trimmer to reduce the message list before dispatch.
+Providers that do NOT list it (Nexus) have no API-side support.
+For these, LiteLLM trims the messages client-side using the token trimmer
+and does NOT forward context_management to the provider.
+
+Your task: fill in the TODO below.
 """
 from typing import Any, Dict, List, Optional
 
@@ -42,13 +45,13 @@ def completion(
 
     if context_management:
         if "context_management" in supported:
-            # Provider handles it natively — forward it as a regular param
+            # Provider handles it natively — forward as a regular param
             kwargs["context_management"] = context_management
         else:
-            # Provider has no context_management support — trim messages here
-            threshold = get_compact_threshold(context_management)
-            if threshold is not None:
-                messages = trim_messages(messages, threshold)
+            # TODO: provider has no context_management support.
+            # Use trim_messages to reduce the message list before dispatch.
+            # Don't forward context_management to the provider.
+            pass
 
     non_default_params = {k: v for k, v in kwargs.items() if k in supported}
 

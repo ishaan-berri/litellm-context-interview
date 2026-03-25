@@ -2,27 +2,9 @@
 LiteLLM internal token trimmer.
 
 Used by the router when a provider (e.g. Nexus) does not support
-context_management natively.  The router calls trim_messages() to reduce
-the conversation history before sending it to the provider.
+context_management natively.
 
-Token counting
---------------
-1 token ≈ 4 UTF-8 characters  (GPT-style approximation, no tiktoken required)
-
-Trimming strategy
------------------
-When total token count exceeds compact_threshold:
-
-1. System messages are ALWAYS kept — they carry the model's instructions.
-2. Decide how many recent non-system messages to protect:
-       keep_last_n = max(1, int(len(non_system) * KEEP_RECENT_FRACTION))
-3. Split non-system into:
-       droppable = messages older than the protected tail
-       recent    = the last keep_last_n messages (never dropped)
-4. Remove messages from the FRONT of droppable until
-       count_tokens(system + remaining_droppable + recent) <= compact_threshold
-5. If all droppable are exhausted and we're still over (e.g. huge system prompt),
-   return system + recent anyway — never drop system or recent to hit a number.
+Token counting: 1 token ≈ 4 UTF-8 characters.
 """
 from typing import Any, Dict, List, Optional
 
@@ -60,10 +42,22 @@ def trim_messages(
     """
     Return a trimmed copy of messages that fits within compact_threshold tokens.
 
-    If already under the threshold, returns the original list unchanged.
-    Never mutates the input list.
-
-    See module docstring for the full trimming strategy.
+    If already under threshold, returns the original list unchanged.
+    System messages are always preserved.
+    The most-recent half of non-system messages are always preserved.
+    Oldest non-system messages are dropped first.
+    Never mutates the input.
     """
-    # TODO: implement this
-    raise NotImplementedError
+    if count_tokens(messages) <= compact_threshold:
+        return messages
+
+    system = [m for m in messages if m.get("role") == "system"]
+    non_sys = [m for m in messages if m.get("role") != "system"]
+    keep_last_n = max(1, int(len(non_sys) * KEEP_RECENT_FRACTION))
+    droppable = list(non_sys[:-keep_last_n])
+    recent = non_sys[-keep_last_n:]
+
+    while droppable and count_tokens(system + droppable + recent) > compact_threshold:
+        droppable.pop(0)
+
+    return system + droppable + recent
